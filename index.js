@@ -1,114 +1,97 @@
-var canvas, ctx, flag = false,
-        prevX = 0,
-        currX = 0,
-        prevY = 0,
-        currY = 0,
-        dot_flag = false;
+const fileInput = document.querySelector("#upload");
 
-    var x = "black",
-        y = 2;
-    
-    function init() {
-        canvas = document.getElementById('can');
-        ctx = canvas.getContext("2d");
-        w = canvas.width;
-        h = canvas.height;
-    
-        canvas.addEventListener("mousemove", function (e) {
-            findxy('move', e)
-        }, false);
-        canvas.addEventListener("mousedown", function (e) {
-            findxy('down', e)
-        }, false);
-        canvas.addEventListener("mouseup", function (e) {
-            findxy('up', e)
-        }, false);
-        canvas.addEventListener("mouseout", function (e) {
-            findxy('out', e)
-        }, false);
+// enabling drawing on the blank canvas
+drawOnImage();
+
+fileInput.addEventListener("change", async (e) => {
+  const [file] = fileInput.files;
+
+  // displaying the uploaded image
+  const image = document.createElement("img");
+  image.src = await fileToDataUri(file);
+
+  // enbaling the brush after after the image
+  // has been uploaded
+  image.addEventListener("load", () => {
+    drawOnImage(image);
+  });
+
+  return false;
+});
+
+function fileToDataUri(field) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+
+    reader.addEventListener("load", () => {
+      resolve(reader.result);
+    });
+
+    reader.readAsDataURL(field);
+  });
+}
+
+const sizeElement = document.querySelector("#sizeRange");
+let size = sizeElement.value;
+sizeElement.oninput = (e) => {
+  size = e.target.value;
+};
+
+const colorElement = document.getElementsByName("colorRadio");
+let color;
+colorElement.forEach((c) => {
+  if (c.checked) color = c.value;
+});
+
+colorElement.forEach((c) => {
+  c.onclick = () => {
+    color = c.value;
+  };
+});
+
+function drawOnImage(image = null) {
+  const canvasElement = document.getElementById("canvas");
+  const context = canvasElement.getContext("2d");
+
+  // if an image is present,
+  // the image passed as a parameter is drawn in the canvas
+  if (image) {
+    const imageWidth = image.width;
+    const imageHeight = image.height;
+
+    // rescaling the canvas element
+    canvasElement.width = imageWidth;
+    canvasElement.height = imageHeight;
+
+    context.drawImage(image, 0, 0, imageWidth, imageHeight);
+  }
+
+  const clearElement = document.getElementById("clear");
+  clearElement.onclick = () => {
+    context.clearRect(0, 0, canvasElement.width, canvasElement.height);
+  };
+
+  let isDrawing;
+
+  canvasElement.onmousedown = (e) => {
+    isDrawing = true;
+    context.beginPath();
+    context.lineWidth = size;
+    context.strokeStyle = color;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    context.moveTo(e.clientX, e.clientY);
+  };
+
+  canvasElement.onmousemove = (e) => {
+    if (isDrawing) {
+      context.lineTo(e.clientX, e.clientY);
+      context.stroke();
     }
-    
-    function color(obj) {
-        switch (obj.id) {
-            case "green":
-                x = "green";
-                break;
-            case "blue":
-                x = "blue";
-                break;
-            case "red":
-                x = "red";
-                break;
-            case "yellow":
-                x = "yellow";
-                break;
-            case "orange":
-                x = "orange";
-                break;
-            case "black":
-                x = "black";
-                break;
-            case "white":
-                x = "white";
-                break;
-        }
-        if (x == "white") y = 14;
-        else y = 2;
-    
-    }
-    
-    function draw() {
-        ctx.beginPath();
-        ctx.moveTo(prevX, prevY);
-        ctx.lineTo(currX, currY);
-        ctx.strokeStyle = x;
-        ctx.lineWidth = y;
-        ctx.stroke();
-        ctx.closePath();
-    }
-    
-    function erase() {
-        var m = confirm("Want to clear");
-        if (m) {
-            ctx.clearRect(0, 0, w, h);
-            document.getElementById("canvasimg").style.display = "none";
-        }
-    }
-    
-    function save() {
-        document.getElementById("canvasimg").style.border = "2px solid";
-        var dataURL = canvas.toDataURL();
-        document.getElementById("canvasimg").src = dataURL;
-        document.getElementById("canvasimg").style.display = "inline";
-    }
-    
-    function findxy(res, e) {
-        if (res == 'down') {
-            prevX = currX;
-            prevY = currY;
-            currX = e.clientX - canvas.offsetLeft;
-            currY = e.clientY - canvas.offsetTop;
-    
-            flag = true;
-            dot_flag = true;
-            if (dot_flag) {
-                ctx.beginPath();
-                ctx.fillStyle = x;
-                ctx.fillRect(currX, currY, 2, 2);
-                ctx.closePath();
-                dot_flag = false;
-            }
-        }
-        if (res == 'up' || res == "out") {
-            flag = false;
-        }
-        if (res == 'move') {
-            if (flag) {
-                prevX = currX;
-                prevY = currY;
-                currX = e.clientX - canvas.offsetLeft;
-                currY = e.clientY - canvas.offsetTop;
-                draw();
-            }
-        }
-    }
+  };
+
+  canvasElement.onmouseup = function () {
+    isDrawing = false;
+    context.closePath();
+  };
+}
